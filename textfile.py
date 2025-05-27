@@ -22,10 +22,15 @@ class TextFile:
         return content
 
     def write(self, content):
+        n_line = 1
         try:
             with open(self.result_path, "a") as file:
+                file.write(f"LINE NO {n_line}\n")
                 for item in content:
-                    file.write(f"{item}\n")
+                    file.write(f"{item}   ")
+                    if item == '9100':
+                        n_line += 1
+                        file.write(f"\n\nLINE NO {n_line}\n")
         except Exception as e:
             print(f"An error occurred: {e}")
 
