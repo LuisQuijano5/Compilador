@@ -64,6 +64,7 @@ def main():
     textfile = TextFile()
 
     resultsfile.clear('Tokens.txt')
+    resultsfile.clear('Lists.txt')
 
     while True:
         if excel.open():
@@ -89,7 +90,7 @@ def main():
                 F.append(i)
 
     automaton = Automaton(matrix, sigma, Q, q0, F)
-    result = automaton.run(textfile_data)
+    result, identifiers, numbers, strings = automaton.run(textfile_data)
 
     if not result:
         resultsfile.write("0")
@@ -97,7 +98,8 @@ def main():
     else:
         tokens = normalize_indent_tokens(result)
         resultsfile.write(tokens)
-        print("Terminado. Revisar el archivo de texto Tokens")
+        resultsfile.write_symbol_data(identifiers, numbers, strings)
+        print("Done. Revisar los archivos de texto Tokens y Lists")
 
     # while True:
     #     if excel.open():

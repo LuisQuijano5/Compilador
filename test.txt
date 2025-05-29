@@ -1,7 +1,7 @@
 counter_global = 0
 lista_resultados_finales = []
 
-class ManejadorContextoFalso#:
+class ManejadorContextoFalso:
     def __enter__(self):
         status = 'entrando'
         return self
@@ -14,7 +14,7 @@ class ManejadorContextoFalso#:
         return False
 
 class ClaseAyudante:
-    valor_interno = 1a
+    valor_interno = 1.3
 
 try:
     from __main__ import ClaseAyudante as CA
