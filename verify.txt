@@ -1,0 +1,13 @@
+as async await break class continue def elif else False for from global if import lambda None pass return True while with
+** * / // % + - == != > < >= <= is in not and or = **= *= /= //= %= += -=
+. , : ; ''
+{}
+() []
+hello
+10
+12.2e+34
+hey:
+    hey:
+        hey
+    hey
+hey

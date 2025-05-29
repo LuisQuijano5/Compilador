@@ -16,9 +16,7 @@ class ManejadorContextoFalso:
 class ClaseAyudante:
     valor_interno = 1.3
 
-try:
-    from __main__ import ClaseAyudante as CA
-except ImportError:
+if from __main__ import ClaseAyudante as CA:
     pass
 
 def incrementar_contador_global():

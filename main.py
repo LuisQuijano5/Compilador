@@ -98,9 +98,11 @@ def main():
     else:
         tokens = normalize_indent_tokens(result)
         resultsfile.write(tokens)
-        resultsfile.write_symbol_data(identifiers, numbers, strings)
-        print("Done. Revisar los archivos de texto Tokens y Lists")
-
+        if tokens[0][:7] != 'LEXICAL':
+            resultsfile.write_symbol_data(identifiers, numbers, strings)
+            print("Done. Revisar los archivos de texto Tokens y Lists")
+        else:
+            print("Done. Hubo errores lexicos")
     # while True:
     #     if excel.open():
     #         break
