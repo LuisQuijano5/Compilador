@@ -1,3 +1,6 @@
+from Token import Token
+from Errors import Error
+
 class Automaton:
     def __init__(self, matrix, sigma, Q, q0, F):
         self.Q = Q
@@ -5,98 +8,95 @@ class Automaton:
         self.sigma = sigma
         self.q0 = q0
         self.F = F
+        #self.types = {6000: "identifier", 1000: "keyword", 3000: "punctuation", 2000: "operator", 4000: "curly brace", 5000: "bracket", 7000: "integer", 8000: "float"}
 
     def run(self, text):
         list = []
+        errors = []
         identifiers = []
-        numbers = []
         strings = []
         i = 0
-        line_pos = 0
-        n_line = 1
+        column = 1
+        row = 1
         while i < len(text):
             current = self.q0
             j = i
-            blanks = 0
             accepted = False
             word = ""
+            aux = ""
 
             while j < len(text):
                 symbol = text[j]
-                if symbol.isdigit():
-                    symbol = int(symbol)
+
+                if current == 160 and symbol != '"':
+                    word += symbol
+                    j += 1
+                    column += 1
+                    if symbol == "\n":
+                        row += 1
+                        column = 1
+                    continue
+                elif current == 164 and symbol != '\n':
+                    j += 1
+                    column += 1
+                    continue
 
                 if symbol == "\n":
                     symbol = "\\n"
                 if symbol == " ":
                     symbol = "\\s"
-                    if current == 8:
-                        blanks += 1
+
+                if symbol.isdigit():
+                    symbol = int(symbol)
 
                 if symbol not in self.sigma:
-                    current = 996 if 1 < current < 8 else 997
-                    break
+                    error = Error("Lexical", "Unrecognized character '%s'" %symbol, row, column)
+                    errors.append(error)
+                    j += 1
+                    column += 1
+                    continue
 
                 current = self.matrix[self.Q.index(current)][self.sigma.index(symbol)]
 
                 if current in self.F:
                     accepted = True
+                    aux = symbol
                     break
 
                 j += 1
-                line_pos += 1
+                column += 1
                 word += str(symbol)
 
             i = j
-            if 996 <= current <= 999:
-                list.clear()
-                if current == 999:
-                    list.append(f"LEXICAL ERROR, invalid identifier in line {n_line} near position " + str(line_pos))
-                elif current == 998:
-                    list.append(f"LEXICAL ERROR, invalid numerical literal in line {n_line} near position " + str(line_pos))
-                elif current == 997:
-                    list.append(f"LEXICAL ERROR, invalid identifier in line {n_line} near position {line_pos}. (non recognized symbol at: {line_pos})")
-                elif current == 996:
-                    list.append(f"LEXICAL ERROR, invalid numerical literal in line {n_line} near position {line_pos}. (non recognized symbol at: {line_pos})")
-                break
-                # j += 1
-                # line_pos += 1
-                # i = j
-            elif accepted:#agregar a la matriz lo de eof
-                if 6000 <= current < 7000:
-                    if word not in [identifier[0] for identifier in identifiers]:
-                        identifiers.append((word, len(identifiers) + current))
-                elif 7000 <= current < 9000:
-                    if word not in [str(num[0]) for num in numbers]:
-                        numbers.append((float(word) if '.' in word else int(word), len(numbers) + current))
-                elif current == 3040:
-                    if word not in [string[0] for string in strings]:
-                        strings.append((word, len(strings) + current))
 
-                if blanks > 0:
-                    list.append(100000 + blanks)
-                else:
-                    list.append(current)
-                    if current == 9100:
-                        line_pos = 0
-                        n_line += 1
-                i = j
-            elif j == len(text):
-                if blanks > 0:
-                    list.append(100000 + blanks)
-                else:
+            if accepted or j == len(text):
+                if j == len(text):
                     current = self.matrix[self.Q.index(current)][self.sigma.index("\\n")]
-                    if current == 999:
-                        list.append("LEXICAL ERROR, invalid identifier near position: " + str(line_pos))
-                    elif current == 998:
-                        list.append("LEXICAL ERROR, invalid numerical literal near position: " + str(line_pos))
-                    elif current == 997:
-                        list.append("LEXICAL ERROR, non recognized symbol at: " + str(line_pos))
-                    else:
-                        list.append(current)
-                break
 
-        return list, identifiers, numbers, strings
+                if current == 998:
+                    error = Error("Lexical", "Invalid number literal '%s'" % (word + aux), row, column - len(word))
+                    errors.append(error)
+                    i += 1
+                    continue
+                elif current == 100000 or current == 9000 or current == 163:
+                    if current == 9000:
+                        row += 1
+                        column = 1
+                    continue
+
+                token = Token(current, word, row, column - len(word))
+                if 6000 == current:
+                    if word not in [identifier.value for identifier in identifiers]:
+                        identifiers.append(token)
+                        token.set_pool_id(6000 + len(identifiers))
+                elif current == 3004:
+                    if word not in [string.value for string in strings]:
+                        strings.append(token)
+                        token.set_pool_id(3000 + len(strings))
+                list.append(token)
+
+        list.append(Token(1, 'EOF', -1, -1))
+        return list, identifiers, strings, errors
 
 
 

@@ -25,33 +25,34 @@ class TextFile:
         try:
             with open(self.result_path, "a") as file:
                 for item in content:
-                    file.write(f"{item}   ")
-                    if item == '9100':
-                        file.write(f"\n")
+                    file.write(f"{item.type}\n")
+                file.write(f"\n\n")
         except Exception as e:
             print(f"An error occurred: {e}")
 
-    def write_symbol_data(self, identifiers, numbers, strings):
+    def write_errors(self, content):
+        try:
+            with open(self.result_path, "a") as file:
+                for item in content:
+                    file.write(f"{item.type} error: {item.value} at row {item.row} column {item.column}\n")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+    def write_symbol_data(self, identifiers, strings):
         try:
             with open("Lists.txt", "a", encoding="utf-8") as file:
                 col_width = 40
 
                 file.write(f"{'IDENTIFIER'.ljust(col_width)}MEMORY\n")
                 file.write("-" * (col_width + 10) + "\n")
-                for name, address in identifiers:
-                    file.write(f"{name.ljust(col_width)}{address}\n")
-                file.write("\n\n")
-
-                file.write(f"{'NUMERICAL CONSTANT'.ljust(col_width)}MEMORY\n")
-                file.write("-" * (col_width + 10) + "\n")
-                for value, address in numbers:
-                    file.write(f"{str(value).ljust(col_width)}{address}\n")
+                for identifier in identifiers:
+                    file.write(f"{identifier.value.ljust(col_width)}{identifier.pool_id}\n")
                 file.write("\n\n")
 
                 file.write(f"{'STRING'.ljust(col_width)}MEMORY\n")
                 file.write("-" * (col_width + 10) + "\n")
-                for string, address in strings:
-                    file.write(f"{string.ljust(col_width)}{address}\n")
+                for string in strings:
+                    file.write(f"{string.value.ljust(col_width)}{string.pool_id}\n")
                 file.write("\n\n")
 
         except Exception as e:
