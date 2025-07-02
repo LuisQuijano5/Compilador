@@ -22,6 +22,7 @@ def main():
 
     excel_data = excel.read()
     textfile_data = textfile.read()
+    #textfile_data = "Hello\rWorld\this is a test."
 
     matrix = [i[1:] for i in excel_data[1:]]
     sigma = excel_data[0][1:]
@@ -45,6 +46,10 @@ def main():
         if errors:
             resultsfile.write_errors(errors)
             print("Hubo errores lexicos")
+
+    for token in tokens:
+        print(token.value, token.index, token.length)
+        print(repr(textfile_data[token.index:token.index+token.length]))
 
     from parser import Parser
     from pretty_print import pretty_print

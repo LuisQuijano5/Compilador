@@ -3,7 +3,7 @@ portal sumar(a, b) {         //falta la coma entre a y b
 }                           // correcto
 
 si (x) {                     // faltan paréntesis ( )
-  z = 1
+  z = 1;
 } sino {                     // falta llave de apertura {
   z = 2;
 }
