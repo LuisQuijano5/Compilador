@@ -1,9 +1,7 @@
-portal sumar(a, b) {         //falta la coma entre a y b
-  x = a + b;                 // falta el segundo operando
-}                           // correcto
-
-si (x) {                     // faltan paréntesis ( )
-  z = 1;
-} sino {                     // falta llave de apertura {
-  z = 2;
+spawnear{
+portal a (de){
+teletransportar encendido;
 }
+
+palanca b = a();
+}morir;

@@ -47,9 +47,9 @@ def main():
             resultsfile.write_errors(errors)
             print("Hubo errores lexicos")
 
-    for token in tokens:
-        print(token.value, token.index, token.length)
-        print(repr(textfile_data[token.index:token.index+token.length]))
+    # for token in tokens:
+    #     print(token.value, token.index, token.length)
+    #     print(repr(textfile_data[token.index:token.index+token.length]))
 
     from parser import Parser
     from pretty_print import pretty_print
@@ -57,8 +57,18 @@ def main():
     # lista de tokens como antes
     parser = Parser(tokens)
     ast = parser.parse()
-    pretty_print(ast)
-    print("Posición final del parser:", parser.pos, "/", len(tokens))
+    syntax_errors = parser.errors
+    for error in syntax_errors:
+        print(error.value)
+    print(pretty_print(ast))
+    #print("Posición final del parser:", parser.pos, "/", len(tokens))
+
+    from semantic import AnalizadorSemantico
+
+    sem = AnalizadorSemantico()
+    sem.visitar_Programa(ast)
+    for error in sem.errores:
+        print(error)
 
 
 if __name__ == "__main__":
