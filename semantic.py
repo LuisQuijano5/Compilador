@@ -1,7 +1,3 @@
-from warnings import catch_warnings
-
-from unicodedata import numeric
-
 from series import *
 from ast_nodes import *
 
@@ -46,6 +42,9 @@ class AnalizadorSemantico:
 
     def analizar(self, nodo):
         metodo = f"visitar_{type(nodo).__name__}"
+        if(type(nodo).__name__ == "ExpresionCadena"):
+            if(len(nodo.texto) == 3):
+                metodo = f"visitar_ExpresionCaracter"
         visitador = getattr(self, metodo, self.visitar_desconocido)
         return visitador(nodo)
 
@@ -58,27 +57,56 @@ class AnalizadorSemantico:
             self.analizar(sentencia)
         self.entorno.salir_ambito()
 
+    # def visitar_DeclaracionFuncion(self, nodo):
+    #     if self.entorno.existe_en_actual(nodo.nombre):
+    #         self.errores.append(f"[Error] Función '{nodo.nombre}' ya declarada en este ámbito")
+    #     tipo_retorno = self.inferir_tipo_retorno(nodo.cuerpo)
+    #     simbolo = Simbolo(nodo.nombre, 'funcion', ambito='local', es_funcion=True, parametros=nodo.parametros, tipo_retorno=tipo_retorno)
+    #     self.entorno.declarar(nodo.nombre, simbolo)
+    #     self.entorno.entrar_ambito()
+    #     for param in nodo.parametros:
+    #         if self.entorno.existe_en_actual(param):
+    #             self.errores.append(f"[Error] Parámetro '{param}' ya declarado en esta función")
+    #         self.entorno.declarar(param, Simbolo(param, 'item', ambito='local'))
+    #     self.funcion_actual = nodo.nombre
+    #     # contiene_tp = False
+    #     # for sentencia in nodo.cuerpo:
+    #     #     self.analizar(sentencia)
+    #     #     if isinstance(sentencia, SentenciaTP):
+    #     #         contiene_tp = True
+    #     # if not contiene_tp:
+    #     #     self.errores.append(f"[Error] La función '{nodo.nombre}' no contiene una sentencia TELETRANSPORTAR")
+    #     self.funcion_actual = None
+    #     self.entorno.salir_ambito()
+
     def visitar_DeclaracionFuncion(self, nodo):
         if self.entorno.existe_en_actual(nodo.nombre):
             self.errores.append(f"[Error] Función '{nodo.nombre}' ya declarada en este ámbito")
-        tipo_retorno = self.inferir_tipo_retorno(nodo.cuerpo)
-        simbolo = Simbolo(nodo.nombre, 'funcion', ambito='local', es_funcion=True, parametros=nodo.parametros, tipo_retorno=tipo_retorno)
-        self.entorno.declarar(nodo.nombre, simbolo)
         self.entorno.entrar_ambito()
         for param in nodo.parametros:
             if self.entorno.existe_en_actual(param):
                 self.errores.append(f"[Error] Parámetro '{param}' ya declarado en esta función")
             self.entorno.declarar(param, Simbolo(param, 'item', ambito='local'))
         self.funcion_actual = nodo.nombre
-        # contiene_tp = False
-        # for sentencia in nodo.cuerpo:
-        #     self.analizar(sentencia)
-        #     if isinstance(sentencia, SentenciaTP):
-        #         contiene_tp = True
-        # if not contiene_tp:
-        #     self.errores.append(f"[Error] La función '{nodo.nombre}' no contiene una sentencia TELETRANSPORTAR")
-        self.funcion_actual = None
+        tipos_retorno = []
+        for sentencia in nodo.cuerpo:
+            self.analizar(sentencia)
+            if isinstance(sentencia, SentenciaTP) and sentencia.destino:
+                tipo_retorno = self.analizar(sentencia.destino)
+                tipos_retorno.append(tipo_retorno)
+        tipo_final = 'item'
+        if tipos_retorno:
+            tipo_final = tipos_retorno[0]
+            for tipo in tipos_retorno:
+                if not self.comparar_tipos(tipo_final, tipo):
+                    self.errores.append( f"[Error] Inconsistencia en tipo de retorno en función '{nodo.nombre}': '{tipo_final}' ≠ '{tipo}'")
         self.entorno.salir_ambito()
+        self.funcion_actual = None
+        simbolo = Simbolo(nodo.nombre, 'funcion', ambito='local', es_funcion=True, parametros=nodo.parametros,tipo_retorno=tipo_final)
+        self.entorno.declarar(nodo.nombre, simbolo)
+
+    def visitar_SentenciaExpresion(self, nodo):
+        self.analizar(nodo.expresion)
 
     def inferir_tipo_retorno(self, cuerpo):
         for s in cuerpo:
@@ -86,20 +114,46 @@ class AnalizadorSemantico:
                 return self.analizar(s.destino)
         return 'item' #esto no estoy seguro, tal vez no esta bien
 
+    #ESTO HAY QUE CHECARLO MUCHOOO
+    def verificar_retorno_consistente(self, cuerpo):
+        tipos_retorno = []
+        for sentencia in cuerpo:
+            if isinstance(sentencia, SentenciaTP):
+                if sentencia.destino:
+                    tipo_expr = self.analizar(sentencia.destino)
+                    tipos_retorno.append(tipo_expr)
+            elif hasattr(sentencia, 'entonces') or hasattr(sentencia, 'sino'):
+                tipos_si = self.verificar_retorno_consistente(sentencia.entonces)
+                tipos_sino = self.verificar_retorno_consistente(sentencia.sino or [])
+                tipos_retorno.extend(tipos_si + tipos_sino)
+
+        return tipos_retorno
+
     def visitar_SentenciaDeclaracion(self, nodo):
         if self.entorno.existe_en_actual(nodo.nombre):
             self.errores.append(f"[Error] Variable '{nodo.nombre}' ya declarada en este ámbito")
         tipo = self.obtener_tipo_nombre(nodo.tipo)
         self.entorno.declarar(nodo.nombre, Simbolo(nodo.nombre, tipo, ambito='local'))
         if hasattr(nodo, 'valor') and nodo.valor:
-            tipo_valor = self.analizar(nodo.valor)
-            if not self.comparar_tipos(tipo, tipo_valor):
-                self.errores.append(f"[Error] Tipo incompatible en asignación a '{nodo.nombre}': {tipo} = {tipo_valor}")
+            if isinstance(nodo.valor, ListaFactores):
+                if tipo != 'cofre':
+                    self.errores.append(f"[Error] Solo variables tipo cofre pueden inicializarse con una lista")
+                self.analizar(nodo.valor)
+            else:
+                tipo_valor = self.analizar(nodo.valor)
+                if not self.comparar_tipos(tipo, tipo_valor):
+                    self.errores.append(
+                        f"[Error] Tipo incompatible en asignación a '{nodo.nombre}': {tipo} = {tipo_valor}")
 
     def visitar_SentenciaAsignacion(self, nodo):
         simbolo = self.entorno.buscar(nodo.nombre)
         if simbolo is None:
             self.errores.append(f"[Error] Variable '{nodo.nombre}' no declarada")
+        elif isinstance(nodo.valor, ListaFactores): #nuevo
+            if simbolo.tipo != 'cofre':
+                self.errores.append(f"[Error] Se intentó asignar una lista a '{nodo.nombre}' que no es tipo cofre")
+            else:
+                self.analizar(nodo.valor)
         else:
             tipo_valor = self.analizar(nodo.valor)
             if not self.comparar_tipos(simbolo.tipo, tipo_valor):
@@ -140,22 +194,15 @@ class AnalizadorSemantico:
         self.entorno.salir_ambito()
 
     def visitar_ExpresionLiteral(self, nodo):
-        try:
-            if '.' in nodo.valor:
-                float_val = float(nodo.valor)
-                return 'losa'
-            else:
-                int_val = int(nodo.valor)
-                return 'bloque'
-        except ValueError:
-            return 'item'
-        except TypeError:
-            if isinstance(nodo.valor, int):
-                return 'bloque'
-            elif isinstance(nodo.valor, float):
-                print("hey")
-                return 'losa'
-            return 'item'
+        if isinstance(nodo.valor, int):
+            return 'bloque'
+        elif isinstance(nodo.valor, float):
+            return 'losa'
+        elif isinstance(nodo.valor, str):
+            if len(nodo.valor) == 1:
+                return 'hoja'
+            return 'libro'
+        return 'item'
 
     def visitar_ExpresionBooleana(self, nodo):
         return 'palanca'
@@ -189,12 +236,13 @@ class AnalizadorSemantico:
             for arg, param in zip(nodo.argumentos, simbolo.parametros):
                 tipo_arg = self.analizar(arg)
                 tipo_param = self.entorno.buscar(param).tipo if self.entorno.buscar(param) else 'item'
+                print(tipo_arg, tipo_param)
                 if not self.comparar_tipos(tipo_arg, tipo_param):
-                    self.errores.append(f"[Error] Tipo de argumento incompatible en llamada a '{nodo.nombre}': {tipo_arg} ≠ {tipo_param}")
+                    self.errores.append(f"[Error] Tipo de argumento incompatible en llamada a '{nodo.funcion}': {tipo_arg} ≠ {tipo_param}")
         return simbolo.tipo_retorno or 'item'
 
     def verificar_funcion_nativa(self, nodo):
-        nombre = nodo.nombre.upper()
+        nombre = nodo.funcion.upper()
         args = [self.analizar(arg) for arg in nodo.argumentos]
         if nombre == 'CHAT':
             return 'item'
@@ -216,7 +264,7 @@ class AnalizadorSemantico:
                     if isinstance(segundo, ExpresionLiteral) and segundo.valor == 0:
                         self.errores.append("[Error] Segundo argumento de REPARTIR no puede ser cero")
             return 'item'
-        self.errores.append(f"[Error] Función '{nodo.nombre}' no declarada")
+        self.errores.append(f"[Error] Función '{nodo.funcion}' no declarada")
         return 'item'
 
     def visitar_ExpresionBinaria(self, nodo):
@@ -250,7 +298,45 @@ class AnalizadorSemantico:
             else:
                 self.errores.append(f"[Error] Operación lógica inválida entre '{tipo_izq}' y '{tipo_der}'")
                 return 'item'
+        elif nodo.operador == '.':
+            if tipo_izq in ['hoja', 'libro'] and tipo_der in ['hoja', 'libro']:
+                return 'libro'
+            else:
+                self.errores.append(f"[Error] Operación lógica inválida entre '{tipo_izq}' y '{tipo_der}'")
+                return 'item'
         return 'item'
+
+    #EL NODO EN REALIDAD SI ACEPTA EXPRESIONES, PERO ESTO POR EL MOMENTO SOLO CONSIDERA -1 Y +1 NO MAS
+    def visitar_ExpresionUnaria(self, nodo):
+        tipo_op = self.analizar(nodo.expresion)
+        if nodo.operador == '-':
+            if tipo_op in ['bloque', 'losa', 'item']:
+                return tipo_op
+            else:
+                self.errores.append(f"[Error] Operador '-' no válido para tipo '{tipo_op}'")
+                return 'item'
+        elif nodo.operador == '+':
+            if tipo_op in ['bloque', 'losa', 'item']:
+                return tipo_op
+            else:
+                self.errores.append(f"[Error] Operador '+' no válido para tipo '{tipo_op}'")
+                return 'item'
+        #POR SI LUEGO AGREGAMOS EL NO
+        # elif nodo.operador == 'no':
+        #     if tipo_op == 'palanca':
+        #         return 'palanca'
+        #     else:
+        #         self.errores.append(f"[Error] Operador 'no' solo se puede usar con palanca, se recibió '{tipo_op}'")
+        #         return 'item'
+        else:
+            self.errores.append(f"[Error] Operador unario desconocido: {nodo.operador}")
+            return 'item'
+
+    def visitar_ExpresionCadena(self, nodo):
+        return 'libro'
+
+    def visitar_ExpresionCaracter(self, nodo):
+        return 'hoja'
 
     def visitar_SentenciaTP(self, nodo):
         if self.funcion_actual is None:
@@ -258,16 +344,36 @@ class AnalizadorSemantico:
         if nodo.destino:
             self.analizar(nodo.destino)
 
+    def visitar_ListaFactores(self, nodo):
+        if hasattr(nodo, 'elementos'): # No se si esta bien esta verificacion jaja
+            tipos = [self.analizar(factor) for factor in nodo.elementos]
+            if not tipos:
+                return 'cofre'
+        else:
+            return 'cofre'
+
+        #Reglas los tipos deben ser consistentes, o se generaliza a item
+        tipo_base = tipos[0]
+        for t in tipos[1:]:
+            if not self.comparar_tipos(tipo_base, t):
+                tipo_base = 'item'
+                break
+        return 'cofre'
+
 #tal vez agregar para strings?? al menos el ==
     def comparar_tipos(self, tipo_destino, tipo_origen):
         if tipo_destino == tipo_origen:
             return True
-        if tipo_destino == 'item':
+        if tipo_destino == 'libro' and (tipo_origen == 'libro' or tipo_origen == 'hoja'):
             return True
         if tipo_destino == 'losa' and (tipo_origen == 'losa' or tipo_origen == 'bloque'):
             return True
+        if tipo_destino == 'losa' and tipo_origen == 'item':
+            return False
         if tipo_destino == 'bloque' and (tipo_origen == 'losa' or tipo_origen == 'item'):
             return False
+        if tipo_destino == 'item' or tipo_origen == 'item':
+            return True
         return False
 
     def obtener_tipo_nombre(self, token_type):

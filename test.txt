@@ -1,7 +1,8 @@
 spawnear{
-portal a (de){
-teletransportar encendido;
+portal a(de, de){
+si (2 > 3){
+}
 }
 
-palanca b = a();
+a(encendido);
 }morir;

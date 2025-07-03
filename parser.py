@@ -1,4 +1,4 @@
-#se cambio lo de backtracking en sentencia asig
+#se cambio lo de backtracking con raise exception en sentencia asig, y sentencia
 #se agrego lista factores y sus metodos
 
 from ast_nodes import *
@@ -152,7 +152,8 @@ class Parser:
     def sentencia_asignacion(self):
         nombre = self.current().value
         self.match(ID)
-        self.match(ASSIGN)
+        if not self.match(ASSIGN, True):
+            raise Exception
         if self.current().type == LSQB:  # [
             self.match(LSQB)
             lista = self.lista_factores()
@@ -297,7 +298,10 @@ class Parser:
                 return ExpresionIdentificador(nombre)
         elif tipo in [INT, FLOAT]:
             self.match(tipo)
-            return ExpresionLiteral(valor)
+            if tipo == INT:
+                return ExpresionLiteral(int(valor)) # hice mod aqui a ver si jala
+            else:
+                return ExpresionLiteral(float(valor))
         elif tipo in [ENCENDIDO, APAGADO]:
             self.match(tipo)
             return ExpresionBooleana(valor)
