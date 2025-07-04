@@ -15,10 +15,12 @@ class ListaFactores:
         self.factores = factores  # lista de nodos factor
 
 class SentenciaAsignacion:
-    def __init__(self, nombre, valor, es_lista=False):
+    def __init__(self, nombre, valor, es_lista=False, indice=None, es_acceso=False):
         self.nombre = nombre    # str
         self.valor = valor      # nodo expresión o ListaFactores
         self.es_lista = es_lista
+        self.indice = indice
+        self.es_acceso = es_acceso
 
 class SentenciaDeclaracion:
     def __init__(self, tipo, nombre, valor=None, es_lista=False):

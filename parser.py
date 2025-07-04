@@ -1,5 +1,6 @@
 #se cambio lo de backtracking con raise exception en sentencia asig, y sentencia
 #se agrego lista factores y sus metodos
+# lista de factorees a factor
 
 from ast_nodes import *
 from Token import Token
@@ -152,8 +153,18 @@ class Parser:
     def sentencia_asignacion(self):
         nombre = self.current().value
         self.match(ID)
-        if not self.match(ASSIGN, True):
+        if self.current().type != ASSIGN:
+            self.match(ASSIGN, True)
+            if self.current().type == LSQB:
+                self.match(LSQB)
+                indice = self.expresion()
+                self.match(RSQB)
+                self.match(ASSIGN)
+                valor = self.expresion()
+                self.match(SEMICOLON)
+                return SentenciaAsignacion(nombre, valor, indice=indice, es_acceso=True)
             raise Exception
+        self.match(ASSIGN)
         if self.current().type == LSQB:  # [
             self.match(LSQB)
             lista = self.lista_factores()
@@ -309,6 +320,11 @@ class Parser:
             return self.cadena_texto()
         elif tipo in [ANTORCHAR, CRAFTEAR, ROMPER, APILAR, REPARTIR, SOBRAR, ENCANTAR, CHAT]:
             return self.funcion_especial()
+        elif tipo == LSQB:
+            self.match(LSQB)
+            factores = self.lista_factores()
+            self.match(RSQB)
+            return ListaFactores(factores)
         else:
             self.error("Factor inválido")
             return ExpresionLiteral(0)
@@ -367,7 +383,7 @@ class Parser:
         factores = []
         primeros_tokens_factor = [
             PLUS, MINUS, LPAREN, ID, INT, FLOAT, ENCENDIDO, APAGADO, QUOTE,
-            ANTORCHAR, CRAFTEAR, ROMPER, APILAR, REPARTIR, SOBRAR, ENCANTAR, CHAT
+            ANTORCHAR, CRAFTEAR, ROMPER, APILAR, REPARTIR, SOBRAR, ENCANTAR, CHAT, LSQB
         ]
         if self.current().type in primeros_tokens_factor:
             factores.append(self.factor())
@@ -375,6 +391,7 @@ class Parser:
 
         return ListaFactores(factores)
 
+    #si mantenemos lista de factores
     def resto_factores(self):
         factores = []
         while self.current().type == COMMA:

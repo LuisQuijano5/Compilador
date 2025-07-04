@@ -1,8 +1,7 @@
 spawnear{
-portal a(de, de){
-si (2 > 3){
+mientras(2 > 2){
+bloque a = 0;
+para(a = 2; a > 2; a > 2){
 }
 }
-
-a(encendido);
 }morir;

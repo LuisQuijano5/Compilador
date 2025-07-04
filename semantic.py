@@ -2,13 +2,14 @@ from series import *
 from ast_nodes import *
 
 class Simbolo:
-    def __init__(self, nombre, tipo, ambito, es_funcion=False, parametros=None, tipo_retorno=None):
+    def __init__(self, nombre, tipo, ambito, es_funcion=False, parametros=None, tipo_retorno=None, tipo_contenido=None):
         self.nombre = nombre
         self.tipo = tipo
         self.ambito = ambito
         self.es_funcion = es_funcion
         self.parametros = parametros or []
         self.tipo_retorno = tipo_retorno
+        self.tipo_contenido = tipo_contenido
 
 
 class Entorno:
@@ -45,6 +46,8 @@ class AnalizadorSemantico:
         if(type(nodo).__name__ == "ExpresionCadena"):
             if(len(nodo.texto) == 3):
                 metodo = f"visitar_ExpresionCaracter"
+        elif(type(nodo).__name__[0:7] == 'Funcion'):
+            metodo = f"visitar_ExpresionLlamadaFuncion"
         visitador = getattr(self, metodo, self.visitar_desconocido)
         return visitador(nodo)
 
@@ -149,6 +152,15 @@ class AnalizadorSemantico:
         simbolo = self.entorno.buscar(nodo.nombre)
         if simbolo is None:
             self.errores.append(f"[Error] Variable '{nodo.nombre}' no declarada")
+        if nodo.es_acceso:
+            if simbolo.tipo != 'cofre':
+                self.errores.append(f"[Error] Variable '{nodo.nombre}' no es un cofre, no puede indexarse")
+            else:
+                tipo_indice = self.analizar(nodo.indice)
+                if tipo_indice != 'bloque':
+                    self.errores.append(
+                        f"[Error] El índice para acceder a '{nodo.nombre}' debe ser de tipo bloque, se recibió '{tipo_indice}'")
+            self.analizar(nodo.valor)
         elif isinstance(nodo.valor, ListaFactores): #nuevo
             if simbolo.tipo != 'cofre':
                 self.errores.append(f"[Error] Se intentó asignar una lista a '{nodo.nombre}' que no es tipo cofre")
@@ -224,11 +236,23 @@ class AnalizadorSemantico:
         tipo_indice = self.analizar(nodo.indice)
         if tipo_indice != 'bloque':
             self.errores.append(f"[Error] El índice en '{nodo.nombre}[exp]' debe ser de tipo bloque, se recibió '{tipo_indice}'")
+        if isinstance(nodo.indice, ExpresionLiteral):
+            if isinstance(nodo.indice.valor, int):
+                if nodo.indice.valor < 0: #en realidad no sirve de nada jajajaja pq es una expresion unaria jajaja
+                    self.errores.append(f"[Error] El índice en '{nodo.nombre}[{nodo.indice.valor}]' no puede ser negativo")
+            else:
+                self.errores.append(f"[Error] El índice debe ser entero, se recibió '{nodo.indice.valor}'")
+        if hasattr(simbolo, 'tipo_contenido') and simbolo.tipo_contenido:
+            return simbolo.tipo_contenido
+
         return 'item'
 
     def visitar_ExpresionLlamadaFuncion(self, nodo):
-        simbolo = self.entorno.buscar(nodo.funcion)
-        if simbolo is None or not simbolo.es_funcion:
+        try:
+            simbolo = self.entorno.buscar(nodo.funcion)
+            if simbolo is None or not simbolo.es_funcion:
+                return self.verificar_funcion_nativa(nodo)
+        except AttributeError:
             return self.verificar_funcion_nativa(nodo)
         if len(nodo.argumentos) != len(simbolo.parametros):
             self.errores.append(f"[Error] Número de argumentos inválido para función '{nodo.funcion}'")
@@ -236,34 +260,40 @@ class AnalizadorSemantico:
             for arg, param in zip(nodo.argumentos, simbolo.parametros):
                 tipo_arg = self.analizar(arg)
                 tipo_param = self.entorno.buscar(param).tipo if self.entorno.buscar(param) else 'item'
-                print(tipo_arg, tipo_param)
                 if not self.comparar_tipos(tipo_arg, tipo_param):
                     self.errores.append(f"[Error] Tipo de argumento incompatible en llamada a '{nodo.funcion}': {tipo_arg} ≠ {tipo_param}")
         return simbolo.tipo_retorno or 'item'
 
     def verificar_funcion_nativa(self, nodo):
-        nombre = nodo.funcion.upper()
-        args = [self.analizar(arg) for arg in nodo.argumentos]
+        nombre = type(nodo).__name__[7:].upper()
         if nombre == 'CHAT':
-            return 'item'
+            return 'item' #no se que devolver aqui asi que el default
         if nombre == 'ANTORCHAR':
+            args = [nodo.valor]
             if args and args[0] != 'palanca':
                 self.errores.append("[Error] ANTORCHAR espera una expresión de tipo palanca")
-            return 'item'
+            return 'palanca'
         if nombre in ['CRAFTEAR', 'ROMPER', 'APILAR', 'REPARTIR', 'SOBRAR', 'ENCANTAR']:
-            if len(args) != 2:
+            if not nodo.izq or not nodo.der:
                 self.errores.append(f"[Error] {nombre} espera exactamente 2 argumentos")
             else:
-                for i, tipo in enumerate(args):
+                args = [nodo.izq, nodo.der]
+                tipos = [self.analizar(args[0]), self.analizar(args[1])]
+                for i, tipo in enumerate(tipos):
                     if tipo not in ['bloque', 'losa', 'item']:
                         self.errores.append(f"[Error] Argumento {i+1} de {nombre} debe ser tipo numérico")
-                if nombre == 'SOBRAR' and 'losa' in args:
+                        return 'item'
+                if nombre == 'SOBRAR' and 'losa' in tipos:
                     self.errores.append("[Error] SOBRAR no permite valores tipo losa (debe ser entero)")
-                if nombre == 'REPARTIR' and len(nodo.argumentos) == 2:
-                    segundo = nodo.argumentos[1]
-                    if isinstance(segundo, ExpresionLiteral) and segundo.valor == 0:
+                if nombre == 'REPARTIR':
+                    if isinstance(args[1], ExpresionLiteral) and args[1].valor == 0:
                         self.errores.append("[Error] Segundo argumento de REPARTIR no puede ser cero")
-            return 'item'
+                if 'item' in tipos:
+                    return 'item'
+                elif 'losa' in tipos:
+                    return 'losa'
+                else:
+                    return 'bloque'
         self.errores.append(f"[Error] Función '{nodo.funcion}' no declarada")
         return 'item'
 
@@ -371,6 +401,8 @@ class AnalizadorSemantico:
         if tipo_destino == 'losa' and tipo_origen == 'item':
             return False
         if tipo_destino == 'bloque' and (tipo_origen == 'losa' or tipo_origen == 'item'):
+            return False
+        if tipo_destino == 'cofre' and tipo_origen == 'item':
             return False
         if tipo_destino == 'item' or tipo_origen == 'item':
             return True

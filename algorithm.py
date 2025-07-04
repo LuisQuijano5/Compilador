@@ -13,7 +13,6 @@ class Automaton:
         #self.types = {6000: "identifier", 1000: "keyword", 3000: "punctuation", 2000: "operator", 4000: "curly brace", 5000: "bracket", 7000: "integer", 8000: "float"}
 
     def run(self, text):
-        print(repr(text))
         list = []
         errors = []
         identifiers = []
