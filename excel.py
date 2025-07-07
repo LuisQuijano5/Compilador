@@ -10,12 +10,13 @@ class Excel:
         self.root = tk.Tk()
 
     def open(self):
-        self.root.withdraw()
-        self.file_path = filedialog.askopenfilename(title="Selecciona el archivo de la matriz excel",
-                                               filetypes=[("Excel Files", "*.xlsx;*.xls")])
-        if self.file_path:
-            return True
-        return False
+        self.file_path = "MatrizTransicion_LA.xlsx"
+        # self.root.withdraw()
+        # self.file_path = filedialog.askopenfilename(title="Selecciona el archivo de la matriz excel",
+        #                                        filetypes=[("Excel Files", "*.xlsx;*.xls")])
+        # if self.file_path:
+        #     return True
+        # return False
 
     def read(self):
         list = []

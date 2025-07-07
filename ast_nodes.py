@@ -10,10 +10,6 @@ class Programa(Nodo):
 class SentenciaVacia(Nodo):
     pass
 
-class ListaFactores:
-    def __init__(self, factores):
-        self.factores = factores  # lista de nodos factor
-
 class SentenciaAsignacion:
     def __init__(self, nombre, valor, es_lista=False, indice=None, es_acceso=False):
         self.nombre = nombre    # str
@@ -32,6 +28,12 @@ class SentenciaDeclaracion:
 class SentenciaExpresion(Nodo):
     def __init__(self, expresion):
         self.expresion = expresion
+
+class DeclaracionFuncion(Nodo):
+    def __init__(self, nombre, parametros, cuerpo):
+        self.nombre = nombre
+        self.parametros = parametros
+        self.cuerpo = cuerpo
 
 class SentenciaTP(Nodo):
     def __init__(self, destino=None):
@@ -55,12 +57,6 @@ class SentenciaPara(Nodo):
         self.actualizacion = actualizacion
         self.cuerpo = cuerpo
 
-class DeclaracionFuncion(Nodo):
-    def __init__(self, nombre, parametros, cuerpo):
-        self.nombre = nombre
-        self.parametros = parametros
-        self.cuerpo = cuerpo
-
 
 #EXPRESIONES
 class ExpresionBinaria(Nodo):
@@ -76,11 +72,6 @@ class ExpresionLiteral(Nodo):
 class ExpresionIdentificador(Nodo):
     def __init__(self, nombre):
         self.nombre = nombre
-
-class ExpresionAccesoArreglo(Nodo):
-    def __init__(self, nombre, indice):
-        self.nombre = nombre
-        self.indice = indice
 
 class ExpresionLlamadaFuncion(Nodo):
     def __init__(self, funcion, argumentos):
@@ -101,6 +92,10 @@ class ExpresionUnaria:
         self.operador = operador
         self.expresion = expresion
 
+class ExpresionAccesoArreglo(Nodo):
+    def __init__(self, nombre, indice):
+        self.nombre = nombre
+        self.indice = indice
 
 #FUNCIONES ESPECIALES
 class FuncionAntorchar(Nodo):
@@ -141,3 +136,6 @@ class FuncionChat(Nodo):
     def __init__(self, mensaje):
         self.mensaje = mensaje
 
+class ListaFactores:
+    def __init__(self, factores):
+        self.factores = factores  # lista de nodos factor

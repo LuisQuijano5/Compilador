@@ -10,15 +10,17 @@ def main():
     resultsfile.clear('Tokens.txt')
     resultsfile.clear('Lists.txt')
 
-    while True:
-        if excel.open():
-           break
-        print("Porfa selecciona el archivo de la matriz excel")
-
-    while True:
-        if textfile.open():
-            break
-        print("Porfa selecciona el archivo de texto a revisar")
+    excel.open()
+    textfile.open()
+    # while True:
+    #     if excel.open():
+    #        break
+    #     print("Porfa selecciona el archivo de la matriz excel")
+    #
+    # while True:
+    #     if textfile.open():
+    #         break
+    #     print("Porfa selecciona el archivo de texto a revisar")
 
     excel_data = excel.read()
     textfile_data = textfile.read()
@@ -40,7 +42,7 @@ def main():
     if not tokens:
         print("El archivo no arrojo resultado, favor de revisar")
     else:
-        print("Done")
+        #print("Done")
         resultsfile.write(tokens)
         resultsfile.write_symbol_data(identifiers, strings)
         if errors:
@@ -60,15 +62,37 @@ def main():
     syntax_errors = parser.errors
     for error in syntax_errors:
         print(error.value)
-    print(pretty_print(ast))
+    #print(pretty_print(ast))
     #print("Posición final del parser:", parser.pos, "/", len(tokens))
 
     from semantic import AnalizadorSemantico
 
     sem = AnalizadorSemantico()
     sem.visitar_Programa(ast)
+    #print(sem.entorno.imprimir_historial())
     for error in sem.errores:
         print(error)
+
+
+    from intermediate import GeneradorIntermedio
+
+    generador = GeneradorIntermedio()
+    generador.generar(ast)
+    # for instr in generador.instrucciones:
+    #     print(instr)
+
+    from optimizer import OptimizadorCodigoIntermedio
+
+    opt = OptimizadorCodigoIntermedio(generador.instrucciones)
+    opt.optimizar()
+    # for ins in opt.codigo_intermedio:
+    #     print(ins)
+
+    from backend import PythonCode
+
+    exe = PythonCode(opt.codigo_intermedio)
+    exe.translate()
+    exe.save_n_exec()
 
 
 if __name__ == "__main__":

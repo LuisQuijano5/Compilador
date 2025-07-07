@@ -9,12 +9,13 @@ class TextFile:
         self.root = tk.Tk()
 
     def open(self):
-        self.root.withdraw()
-        self.file_path = filedialog.askopenfilename(title="Introduce el archivo de texto a revisar",
-                                                    filetypes=[("Text Files", "*.txt")])
-        if self.file_path:
-            return True
-        return False
+        self.file_path = "test.txt"
+        # self.root.withdraw()
+        # self.file_path = filedialog.askopenfilename(title="Introduce el archivo de texto a revisar",
+        #                                             filetypes=[("Text Files", "*.txt")])
+        # if self.file_path:
+        #     return True
+        # return False
 
     def read(self):
         with open(self.file_path, "r") as file:

@@ -1,7 +1,12 @@
 spawnear{
-mientras(2 > 2){
-bloque a = 0;
-para(a = 2; a > 2; a > 2){
-}
-}
+palanca a = encendido;
+palanca b = a y 2 == 2;
+chat(antorchaR(b));
+chat(antorchaR(b == apagado));
+
+bloque x = 3;
+bloque z = 3;
+x = x;
+x = x + z * 2 + craftear(2, 3);
+chat(x);
 }morir;

@@ -1,7 +1,3 @@
-#se cambio lo de backtracking con raise exception en sentencia asig, y sentencia
-#se agrego lista factores y sus metodos
-# lista de factorees a factor
-
 from ast_nodes import *
 from Token import Token
 from series import *
